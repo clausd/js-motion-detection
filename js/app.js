@@ -69,12 +69,12 @@
 	};
 
 	if (navigator.getUserMedia) {
-		navigator.getUserMedia({audio: true, video: true}, function (stream) {
+		navigator.getUserMedia({audio: false, video: true}, function (stream) {
 			video.src = stream;
 			initialize();
 		}, webcamError);
 	} else if (navigator.webkitGetUserMedia) {
-		navigator.webkitGetUserMedia({audio: true, video: true}, function (stream) {
+		navigator.webkitGetUserMedia({audio: false, video: true}, function (stream) {
 			video.src = window.webkitURL.createObjectURL(stream);
 			initialize();
 		}, webcamError);
@@ -85,9 +85,11 @@
 	var lastImageData;
 	var canvasSource = $("#canvas-source")[0];
 	var canvasBlended = $("#canvas-blended")[0];
+	var canvasDiff = $("#canvas-diff")[0];
 
 	var contextSource = canvasSource.getContext('2d');
 	var contextBlended = canvasBlended.getContext('2d');
+	var contextDiff = canvasDiff.getContext('2d');
 
 	// mirror video
 	contextSource.translate(canvasSource.width, 0);
@@ -128,6 +130,7 @@
 	function update() {
 		drawVideo();
 		blend();
+		showCenter();
 		checkAreas();
 		requestAnimFrame(update);
 	}
@@ -145,10 +148,13 @@
 		if (!lastImageData) lastImageData = contextSource.getImageData(0, 0, width, height);
 		// create a ImageData instance to receive the blended result
 		var blendedData = contextSource.createImageData(width, height);
+		var diffData = contextSource.createImageData(width, height);
 		// blend the 2 images
 		differenceAccuracy(blendedData.data, sourceData.data, lastImageData.data);
+		// difference(diffData.data, sourceData.data, lastImageData.data);
 		// draw the result in a canvas
 		contextBlended.putImageData(blendedData, 0, 0);
+		// contextDiff.putImageData(diffData, 0, 0);
 		// store the current webcam image
 		lastImageData = sourceData;
 	}
@@ -160,6 +166,32 @@
 
 	function threshold(value) {
 		return (value > 0x15) ? 0xFF : 0;
+	}
+
+	function showCenter() {
+		var c = computeCenter(contextBlended.getImageData(0, 0, canvasSource.width, canvasSource.height));
+
+		d3.select('#center')
+			.style('display', 'block')
+			.style('position', 'fixed')
+			.style('top', c.y + 'px')
+			.style('left', c.x + 'py');
+	}
+
+	function computeCenter(img_data) {
+		var i = 0;
+		var sum_x = 0;
+		var sum_y = 0;
+		var n = 0;
+		while (i < img_data.width*img_data.height) {
+			if (img_data.data[4*i] > 0) {
+					n = n + 1;
+					sum_x = sum_x + (i % img_data.width);
+					sum_y = sum_y + Math.floor(i/img_data.width);
+			}
+			++i;
+		}
+		return {x: sum_x/n, y: sum_y/n};
 	}
 
 	function difference(target, data1, data2) {

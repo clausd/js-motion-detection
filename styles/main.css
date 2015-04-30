@@ -157,11 +157,11 @@ video {
 }
 
 #canvas-blended {
-	display: none;
+	/*display: none;*/
 	position: absolute;
 	bottom: 0;
 	right: 0;
-	opacity: 0;
+	opacity: 1;
 }
 
 #hotSpots {
